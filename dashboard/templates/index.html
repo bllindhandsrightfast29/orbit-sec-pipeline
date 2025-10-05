@@ -240,6 +240,34 @@
             transform: translateX(5px);
         }
 
+        .fix-recommendation {
+            background: #ecfdf5;
+            border-left: 3px solid #10b981;
+            padding: 12px;
+            margin-top: 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .fix-recommendation code {
+            background: #d1fae5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            color: #059669;
+            font-weight: 600;
+        }
+
+        .remediation-note {
+            background: #fef3c7;
+            border-left: 3px solid #f59e0b;
+            padding: 10px;
+            margin-top: 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            color: #92400e;
+        }
+
         .auto-refresh {
             text-align: center;
             color: white;
@@ -397,11 +425,19 @@
                     <div class="finding-description">${finding.description}</div>
                     <div class="finding-meta">
                         ${finding.package ? `Package: ${finding.package}` : ''}
-                        ${finding.file ? `File: ${finding.file}:${finding.line}` : ''}
+                        ${finding.installed_version ? ` (${finding.installed_version})` : ''}
+                        ${finding.file ? ` | File: ${finding.file}` : ''}
+                        ${finding.line ? `:${finding.line}` : ''}
                         ${finding.resource ? `Resource: ${finding.resource}` : ''}
-                        ${finding.fixed_version ? ` | Fix: ${finding.fixed_version}` : ''}
-                        ${finding.remediation ? ` | ${finding.remediation}` : ''}
                     </div>
+                    ${finding.fixed_version ? `
+                        <div class="fix-recommendation">
+                            🔧 <strong>Fix Available:</strong> Upgrade to <code>${finding.fixed_version}</code>
+                            ${finding.package && finding.file && finding.file.includes('requirements.txt') ?
+                                `<br>📝 <strong>Update:</strong> <code>${finding.package}==${finding.fixed_version}</code> in ${finding.file}` : ''}
+                        </div>
+                    ` : ''}
+                    ${finding.remediation ? `<div class="remediation-note">💡 ${finding.remediation}</div>` : ''}
                 </div>
             `;
         }
