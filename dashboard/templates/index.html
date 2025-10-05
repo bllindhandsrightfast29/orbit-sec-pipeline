@@ -268,6 +268,46 @@
             color: #92400e;
         }
 
+        .fix-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.2s;
+            font-size: 0.9em;
+        }
+
+        .fix-btn:hover {
+            background: #059669;
+            transform: translateY(-1px);
+        }
+
+        .fix-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .fix-all-btn {
+            background: #059669;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.2s;
+        }
+
+        .fix-all-btn:hover {
+            background: #047857;
+            transform: scale(1.05);
+        }
+
         .auto-refresh {
             text-align: center;
             color: white;
@@ -298,8 +338,15 @@
 <body>
     <div class="container">
         <header>
-            <h1>🛡️ ORBIT-SEC Security Dashboard</h1>
-            <p class="subtitle">Real-time DevSecOps Pipeline Monitoring</p>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1>🛡️ ORBIT-SEC Security Dashboard</h1>
+                    <p class="subtitle">Real-time DevSecOps Pipeline Monitoring</p>
+                </div>
+                <button class="fix-all-btn" onclick="fixAllVulnerabilities()">
+                    🔧 Fix All Vulnerabilities
+                </button>
+            </div>
         </header>
 
         <div id="loading" class="loading">Loading security scan results</div>
@@ -434,7 +481,10 @@
                         <div class="fix-recommendation">
                             🔧 <strong>Fix Available:</strong> Upgrade to <code>${finding.fixed_version}</code>
                             ${finding.package && finding.file && finding.file.includes('requirements.txt') ?
-                                `<br>📝 <strong>Update:</strong> <code>${finding.package}==${finding.fixed_version}</code> in ${finding.file}` : ''}
+                                `<br>📝 <strong>Update:</strong> <code>${finding.package}==${finding.fixed_version}</code> in ${finding.file}
+                                <br><button class="fix-btn" onclick="fixVulnerability(${finding.id}, '${finding.package}')">
+                                    ⚡ Apply Fix Now
+                                </button>` : ''}
                         </div>
                     ` : ''}
                     ${finding.remediation ? `<div class="remediation-note">💡 ${finding.remediation}</div>` : ''}
@@ -447,6 +497,86 @@
 
         // Auto-refresh every 30 seconds
         setInterval(fetchScanData, 30000);
+
+        // Fix individual vulnerability
+        async function fixVulnerability(vulnId, packageName) {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = 'Fixing...';
+
+            try {
+                const response = await fetch(`/api/fix/${vulnId}`, {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    btn.textContent = '✓ Fixed!';
+                    btn.style.background = '#10b981';
+
+                    alert(`✅ Fixed ${packageName}!\n\n` +
+                          `Updated: ${result.old_version} → ${result.new_version}\n` +
+                          `File: ${result.file}\n` +
+                          `Backup: ${result.backup}\n\n` +
+                          `Refresh the page and re-scan to see updated results.`);
+
+                    setTimeout(() => window.location.reload(), 2000);
+                } else {
+                    btn.textContent = 'Fix Failed';
+                    btn.style.background = '#dc2626';
+                    alert(`❌ Fix failed: ${result.error}`);
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                btn.textContent = 'Error';
+                btn.style.background = '#dc2626';
+                alert(`❌ Error: ${error.message}`);
+                btn.disabled = false;
+            }
+        }
+
+        // Fix all vulnerabilities
+        async function fixAllVulnerabilities() {
+            if (!confirm('Fix ALL vulnerabilities with available patches?\n\nThis will update your requirements files and create backups.')) {
+                return;
+            }
+
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = 'Fixing all...';
+
+            try {
+                const response = await fetch('/api/fix-all', {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    btn.textContent = '✓ All Fixed!';
+                    btn.style.background = '#10b981';
+
+                    const details = result.files_updated.map(f =>
+                        `${f.file}: ${f.fixes_applied} fixes (backup: ${f.backup})`
+                    ).join('\n');
+
+                    alert(`✅ Fixed ${result.total_fixed} vulnerabilities!\n\n${details}\n\nRefresh and re-scan to see results.`);
+
+                    setTimeout(() => window.location.reload(), 3000);
+                } else {
+                    btn.textContent = 'Fix Failed';
+                    btn.style.background = '#dc2626';
+                    alert(`❌ Fix failed: ${result.error}`);
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                btn.textContent = 'Error';
+                btn.style.background = '#dc2626';
+                alert(`❌ Error: ${error.message}`);
+                btn.disabled = false;
+            }
+        }
     </script>
 </body>
 </html>
