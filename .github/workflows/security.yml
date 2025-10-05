@@ -1,0 +1,112 @@
+name: ORBIT-SEC Security Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  security-scan:
+    name: Security Vulnerability Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      # CHECKOUT CODE
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # SETUP PYTHON ENVIRONMENT
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      # INSTALL DEPENDENCIES (for context)
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+        continue-on-error: true
+
+      # AEGIS - TRIVY FILESYSTEM SCAN (Dependencies)
+      - name: Run Trivy vulnerability scanner (Filesystem)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          severity: 'CRITICAL,HIGH'
+          format: 'table'
+          exit-code: '1'
+          output: 'trivy-results.txt'
+
+      # HELIOS - GENERATE TRIVY HTML REPORT
+      - name: Generate Trivy HTML report
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'template'
+          template: '@/contrib/html.tpl'
+          output: 'trivy-report.html'
+        if: always()
+        continue-on-error: true
+
+      # AEGIS - TRIVY CONFIG SCAN (Dockerfile)
+      - name: Run Trivy config scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          severity: 'CRITICAL,HIGH'
+          format: 'table'
+          exit-code: '0'
+        continue-on-error: true
+
+      # AEGIS - GITLEAKS SECRET SCAN
+      - name: Run Gitleaks secret scanner
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # HELIOS - UPLOAD SECURITY REPORTS
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-reports
+          path: |
+            trivy-results.txt
+            trivy-report.html
+          retention-days: 30
+
+      # HELIOS - CREATE STATUS SUMMARY
+      - name: Create scan status summary
+        if: always()
+        run: |
+          echo "## ORBIT-SEC Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Scan Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Components Executed:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **Apollo**: Pipeline orchestration" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **Aegis**: Security gate (Trivy + Gitleaks)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **Helios**: Report generation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Check the uploaded artifacts for detailed reports." >> $GITHUB_STEP_SUMMARY
+
+      # NOTIFICATION ON FAILURE
+      - name: Security scan failed
+        if: failure()
+        run: |
+          echo "❌ Security scan detected CRITICAL or HIGH vulnerabilities!"
+          echo "Review the artifacts for detailed findings."
+          exit 1
