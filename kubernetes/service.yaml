@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: orbit-sec-service
+  namespace: default
+  labels:
+    app: orbit-sec
+spec:
+  # VULNERABILITY: LoadBalancer exposes service publicly
+  type: LoadBalancer
+
+  selector:
+    app: orbit-sec
+
+  ports:
+  - port: 80
+    targetPort: 5000
+    protocol: TCP
+    name: http
+
+  # VULNERABILITY: No TLS/HTTPS configuration
+  # VULNERABILITY: No network policies to restrict access

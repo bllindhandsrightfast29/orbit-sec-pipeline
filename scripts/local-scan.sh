@@ -110,6 +110,40 @@ else
 fi
 
 echo ""
+echo -e "${YELLOW}☁️ Scanning IaC configurations...${NC}"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+if [ -d "terraform" ]; then
+    echo "Scanning Terraform files..."
+    if trivy config terraform/ \
+        --severity CRITICAL,HIGH,MEDIUM \
+        --exit-code 0 \
+        --format table; then
+        echo -e "${GREEN}✓ Terraform scan completed${NC}"
+    else
+        echo -e "${YELLOW}⚠ Terraform has misconfigurations (non-blocking for local)${NC}"
+        SCAN_FAILED=1
+    fi
+else
+    echo -e "${BLUE}ℹ No terraform/ directory found${NC}"
+fi
+
+if [ -d "kubernetes" ]; then
+    echo "Scanning Kubernetes manifests..."
+    if trivy config kubernetes/ \
+        --severity CRITICAL,HIGH,MEDIUM \
+        --exit-code 0 \
+        --format table; then
+        echo -e "${GREEN}✓ Kubernetes scan completed${NC}"
+    else
+        echo -e "${YELLOW}⚠ Kubernetes manifests have issues (non-blocking for local)${NC}"
+        SCAN_FAILED=1
+    fi
+else
+    echo -e "${BLUE}ℹ No kubernetes/ directory found${NC}"
+fi
+
+echo ""
 echo "════════════════════════════════════════"
 
 if [ $SCAN_FAILED -eq 0 ]; then

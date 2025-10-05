@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orbit-sec-app
+  namespace: default
+  labels:
+    app: orbit-sec
+    tier: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: orbit-sec
+  template:
+    metadata:
+      labels:
+        app: orbit-sec
+    spec:
+      # VULNERABILITY: No security context defined
+      # VULNERABILITY: Running as root
+      containers:
+      - name: flask-app
+        image: orbit-sec:latest
+        imagePullPolicy: IfNotPresent  # VULNERABILITY: Not using Always
+
+        ports:
+        - containerPort: 5000
+          protocol: TCP
+
+        # VULNERABILITY: Hardcoded secrets in environment
+        env:
+        - name: DATABASE_PASSWORD
+          value: "SuperSecret123!"
+        - name: API_KEY
+          value: "sk_live_51234567890abcdefghijklmnop"
+        - name: DEBUG_MODE
+          value: "true"
+
+        # VULNERABILITY: No resource limits
+        # resources:
+        #   limits:
+        #     cpu: "500m"
+        #     memory: "512Mi"
+        #   requests:
+        #     cpu: "250m"
+        #     memory: "256Mi"
+
+        # VULNERABILITY: No liveness/readiness probes
+        # livenessProbe:
+        #   httpGet:
+        #     path: /health
+        #     port: 5000
+        #   initialDelaySeconds: 30
+        #   periodSeconds: 10
+
+        # VULNERABILITY: Privileged container
+        securityContext:
+          privileged: true
+          allowPrivilegeEscalation: true
+          runAsNonRoot: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            add:
+            - ALL  # VULNERABILITY: All capabilities enabled
+
+        volumeMounts:
+        - name: host-volume
+          mountPath: /host
+
+      # VULNERABILITY: hostPath volume mount
+      volumes:
+      - name: host-volume
+        hostPath:
+          path: /
+          type: Directory
+
+      # VULNERABILITY: No pod security policy
+      # VULNERABILITY: hostNetwork enabled
+      hostNetwork: true
+      hostPID: true
+      hostIPC: true
+
+      # VULNERABILITY: No image pull secrets
+      # imagePullSecrets:
+      # - name: registry-credentials
