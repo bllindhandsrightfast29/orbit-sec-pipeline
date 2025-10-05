@@ -194,9 +194,22 @@ async def fix_vulnerability(vuln_id: int):
 
     # Update requirements file
     try:
-        target_file = Path(__file__).parent.parent / file_path
-        if not target_file.exists():
-            return {"error": f"File not found: {file_path}"}
+        # Try multiple possible file locations
+        project_root = Path(__file__).parent.parent
+        possible_paths = [
+            project_root / file_path,
+            project_root / "dashboard" / file_path,
+            Path(file_path)  # Absolute path
+        ]
+
+        target_file = None
+        for path in possible_paths:
+            if path.exists():
+                target_file = path
+                break
+
+        if not target_file:
+            return {"error": f"File not found: {file_path} (tried {[str(p) for p in possible_paths]})"}
 
         # Backup original
         backup_path = target_file.with_suffix('.txt.backup')
@@ -276,8 +289,21 @@ async def fix_all_vulnerabilities():
 
     for file_path, fixes in files_to_fix.items():
         try:
-            target_file = Path(__file__).parent.parent / file_path
-            if not target_file.exists():
+            # Try multiple possible file locations
+            project_root = Path(__file__).parent.parent
+            possible_paths = [
+                project_root / file_path,
+                project_root / "dashboard" / file_path,
+                Path(file_path)
+            ]
+
+            target_file = None
+            for path in possible_paths:
+                if path.exists():
+                    target_file = path
+                    break
+
+            if not target_file:
                 continue
 
             # Read and backup
