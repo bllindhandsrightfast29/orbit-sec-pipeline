@@ -59,8 +59,32 @@ jobs:
         if: always()
         continue-on-error: true
 
+      # AEGIS - TRIVY IAC SCAN (Terraform)
+      - name: Run Trivy IaC scanner for Terraform
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: 'terraform/'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          format: 'table'
+          exit-code: '1'
+          output: 'trivy-iac-terraform.txt'
+        continue-on-error: true
+
+      # AEGIS - TRIVY IAC SCAN (Kubernetes)
+      - name: Run Trivy IaC scanner for Kubernetes
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: 'kubernetes/'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          format: 'table'
+          exit-code: '1'
+          output: 'trivy-iac-k8s.txt'
+        continue-on-error: true
+
       # AEGIS - TRIVY CONFIG SCAN (Dockerfile)
-      - name: Run Trivy config scanner
+      - name: Run Trivy config scanner for Dockerfile
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'config'
@@ -70,11 +94,51 @@ jobs:
           exit-code: '0'
         continue-on-error: true
 
+      # AEGIS - CHECKOV IAC SCAN
+      - name: Run Checkov IaC scanner
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          framework: terraform,kubernetes
+          quiet: false
+          soft_fail: true
+          output_format: cli
+          output_file_path: checkov-report.txt
+
       # AEGIS - GITLEAKS SECRET SCAN
       - name: Run Gitleaks secret scanner
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # BUILD DOCKER IMAGE
+      - name: Build Docker image
+        run: |
+          docker build -t orbit-sec:${{ github.sha }} .
+          docker tag orbit-sec:${{ github.sha }} orbit-sec:latest
+
+      # AEGIS - TRIVY IMAGE SCAN (Container Vulnerabilities)
+      - name: Run Trivy image scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'image'
+          image-ref: 'orbit-sec:latest'
+          severity: 'CRITICAL,HIGH'
+          format: 'table'
+          exit-code: '1'
+          output: 'trivy-image-results.txt'
+
+      # HELIOS - GENERATE TRIVY IMAGE HTML REPORT
+      - name: Generate Trivy image HTML report
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'image'
+          image-ref: 'orbit-sec:latest'
+          format: 'template'
+          template: '@/contrib/html.tpl'
+          output: 'trivy-image-report.html'
+        if: always()
+        continue-on-error: true
 
       # HELIOS - UPLOAD SECURITY REPORTS
       - name: Upload security reports
@@ -85,6 +149,11 @@ jobs:
           path: |
             trivy-results.txt
             trivy-report.html
+            trivy-image-results.txt
+            trivy-image-report.html
+            trivy-iac-terraform.txt
+            trivy-iac-k8s.txt
+            checkov-report.txt
           retention-days: 30
 
       # HELIOS - CREATE STATUS SUMMARY
@@ -98,8 +167,16 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Components Executed:" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ **Apollo**: Pipeline orchestration" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ **Aegis**: Security gate (Trivy + Gitleaks)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **Aegis**: Security gate (Trivy + Gitleaks + Container scan)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ **Helios**: Report generation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Scans Performed:" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔍 Dependency vulnerabilities (requirements.txt)" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔐 Secret detection (Gitleaks)" >> $GITHUB_STEP_SUMMARY
+          echo "- 🐳 Container image vulnerabilities" >> $GITHUB_STEP_SUMMARY
+          echo "- ⚙️ Configuration scanning (Dockerfile)" >> $GITHUB_STEP_SUMMARY
+          echo "- ☁️ IaC scanning (Terraform + Kubernetes)" >> $GITHUB_STEP_SUMMARY
+          echo "- 🛡️ Policy validation (Checkov)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Check the uploaded artifacts for detailed reports." >> $GITHUB_STEP_SUMMARY
 

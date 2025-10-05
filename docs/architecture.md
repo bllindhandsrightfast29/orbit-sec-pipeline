@@ -69,12 +69,24 @@ graph LR
    - Checks CRITICAL and HIGH severity vulnerabilities
    - Fails build immediately on findings (exit-code: 1)
 
-2. **Configuration Scanning (Trivy)**
+2. **Container Image Scanning (Trivy)**
+   - Builds Docker image from Dockerfile
+   - Scans for OS-level vulnerabilities
+   - Detects outdated packages in base images
+   - Fails on CRITICAL/HIGH findings
+
+3. **IaC Scanning (Trivy + Checkov)**
+   - Scans Terraform configurations for misconfigurations
+   - Validates Kubernetes manifests for security issues
+   - Checks for compliance violations (CIS benchmarks)
+   - Detects hardcoded secrets in IaC files
+
+4. **Configuration Scanning (Trivy)**
    - Analyzes Dockerfile for misconfigurations
    - Checks for security best practices
    - Non-blocking (informational)
 
-3. **Secret Detection (Gitleaks)**
+5. **Secret Detection (Gitleaks)**
    - Scans entire repository for exposed credentials
    - Detects API keys, passwords, tokens
    - Fails build on any secret detection
@@ -169,7 +181,11 @@ ORBIT-SEC prioritizes **prevention over detection**:
 | Threat Type | Detection Method | Severity Threshold |
 |-------------|------------------|-------------------|
 | Known CVEs in dependencies | Trivy database scan | CRITICAL/HIGH |
+| Container vulnerabilities | Trivy image scan | CRITICAL/HIGH |
 | Exposed secrets (API keys) | Gitleaks pattern matching | ANY |
+| IaC misconfigurations | Trivy + Checkov | CRITICAL/HIGH/MEDIUM |
+| Terraform security issues | Trivy config scan | CRITICAL/HIGH/MEDIUM |
+| Kubernetes pod security | Trivy + Checkov | CRITICAL/HIGH/MEDIUM |
 | Docker misconfigurations | Trivy config scan | Info only |
 | Outdated packages | Trivy version check | CRITICAL/HIGH |
 
@@ -203,28 +219,42 @@ Future (Week 4):
   - Execution time: ~2-3 minutes per scan
   - Artifact storage: 30 days
 
+## Current Capabilities (Implemented)
+
+### ✅ Container Image Scanning
+- Docker image vulnerability detection
+- OS-level package scanning
+- Base image security validation
+- Automated build and scan in CI/CD
+
+### ✅ Infrastructure as Code (IaC) Security
+- **Terraform Scanning:**
+  - AWS resource misconfigurations
+  - Hardcoded credentials detection
+  - Security group rule validation
+  - S3 bucket policy checks
+  - RDS encryption verification
+
+- **Kubernetes Scanning:**
+  - Pod security policy violations
+  - Privileged container detection
+  - HostPath volume warnings
+  - Resource limit validation
+  - Security context enforcement
+
+- **Policy Validation (Checkov):**
+  - CIS benchmark compliance
+  - Best practice enforcement
+  - Custom policy rules
+
 ## Future Enhancements
 
-### Week 3: Container Image Scanning
-```yaml
-- name: Scan Docker image
-  uses: aquasecurity/trivy-action@master
-  with:
-    scan-type: 'image'
-    image-ref: 'orbit-sec:latest'
-```
-
-### Week 4: Infrastructure as Code (IaC)
-- Terraform security scanning
-- CloudFormation template validation
-- Kubernetes manifest checks
-
-### Week 5: SBOM Generation
+### Week 9+: SBOM Generation
 - Software Bill of Materials (SBOM) creation
 - CycloneDX or SPDX format
 - Supply chain transparency
 
-### Week 6: Athena AI Remediation (Concept)
+### Week 10+: Athena AI Remediation (Concept)
 - AI-powered vulnerability analysis
 - Automated upgrade recommendations
 - Risk scoring and prioritization
@@ -235,9 +265,12 @@ Future (Week 4):
 - Checkout: ~5 seconds
 - Python setup: ~15 seconds
 - Dependency scan: ~30 seconds
+- Container image build: ~45 seconds
+- Container image scan: ~30 seconds
+- IaC scans (Trivy + Checkov): ~40 seconds
 - Secret scan: ~10 seconds
-- Report generation: ~5 seconds
-- **Total: ~65 seconds**
+- Report generation: ~10 seconds
+- **Total: ~3-4 minutes**
 
 **Scalability:**
 - Monorepo support: ✅ (scan-ref configurable)
