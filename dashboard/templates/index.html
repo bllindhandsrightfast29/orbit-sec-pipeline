@@ -219,6 +219,27 @@
             font-size: 0.85em;
         }
 
+        .show-all-btn {
+            text-align: center;
+            padding: 15px;
+            margin-top: 15px;
+            background: #f3f4f6;
+            border-radius: 8px;
+            color: #666;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .finding-item {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .finding-item:hover {
+            background: #f3f4f6;
+            transform: translateX(5px);
+        }
+
         .auto-refresh {
             text-align: center;
             color: white;
@@ -355,7 +376,10 @@
                 </div>
 
                 <div class="findings-list">
-                    ${scan.findings ? scan.findings.slice(0, 3).map(finding => createFinding(finding)).join('') : ''}
+                    ${scan.findings && scan.findings.length > 0 ?
+                        `${scan.findings.map(finding => createFinding(finding)).join('')}
+                         ${scan.findings.length > 5 ? `<div class="show-all-btn">Showing all ${scan.findings.length} findings</div>` : ''}`
+                        : '<p style="color: #999; text-align: center; padding: 20px;">No vulnerabilities found</p>'}
                 </div>
             `;
 
