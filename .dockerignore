@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+venv/
+env/
+ENV/
+.pytest_cache/
+*.egg-info/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# GitHub
+.github/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Documentation
+README.md
+docs/
+*.md
+
+# Scripts
+scripts/
+
+# Reports and logs
+reports/
+*.log
+trivy-results.txt
+trivy-report.html
+gitleaks-report.json
+
+# Security
+*.pem
+*.key
+.env
+secrets.txt
