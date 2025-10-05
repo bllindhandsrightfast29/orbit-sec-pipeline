@@ -11,8 +11,14 @@ from datetime import datetime
 
 app = FastAPI(title="ORBIT-SEC Dashboard", version="1.0.0")
 
-# Setup templates
+# Setup templates and static files
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+
+# Mount static files
+from fastapi.staticfiles import StaticFiles
+static_path = Path(__file__).parent / "static"
+if static_path.exists():
+    app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
 
 DB_PATH = Path(__file__).parent.parent / "results.db"
 
