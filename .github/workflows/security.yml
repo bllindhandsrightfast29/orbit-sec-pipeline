@@ -53,9 +53,8 @@ jobs:
         with:
           scan-type: 'fs'
           scan-ref: '.'
-          format: 'template'
-          template: '@/contrib/html.tpl'
-          output: 'trivy-report.html'
+          format: 'sarif'
+          output: 'trivy-report.sarif'
         if: always()
         continue-on-error: true
 
@@ -128,15 +127,14 @@ jobs:
           exit-code: '1'
           output: 'trivy-image-results.txt'
 
-      # HELIOS - GENERATE TRIVY IMAGE HTML REPORT
-      - name: Generate Trivy image HTML report
+      # HELIOS - GENERATE TRIVY IMAGE SARIF REPORT
+      - name: Generate Trivy image SARIF report
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'image'
           image-ref: 'orbit-sec:latest'
-          format: 'template'
-          template: '@/contrib/html.tpl'
-          output: 'trivy-image-report.html'
+          format: 'sarif'
+          output: 'trivy-image-report.sarif'
         if: always()
         continue-on-error: true
 
@@ -148,9 +146,9 @@ jobs:
           name: security-reports
           path: |
             trivy-results.txt
-            trivy-report.html
+            trivy-report.sarif
             trivy-image-results.txt
-            trivy-image-report.html
+            trivy-image-report.sarif
             trivy-iac-terraform.txt
             trivy-iac-k8s.txt
             checkov-report.txt
