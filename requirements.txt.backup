@@ -1,0 +1,6 @@
+# Intentionally vulnerable dependencies for security scanning demo
+Flask==2.0.1  # Known CVE-2023-30861 (cookie parsing vulnerability)
+requests==2.25.0  # Old version with known vulnerabilities
+Werkzeug==2.0.1  # Known debug mode vulnerability
+Jinja2==3.0.1  # Potential SSTI issues
+urllib3==1.26.4  # Known CVE-2021-33503
