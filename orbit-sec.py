@@ -39,6 +39,8 @@ class Scanner:
                       description TEXT,
                       file TEXT,
                       line INTEGER,
+                      installed_version TEXT,
+                      fixed_version TEXT,
                       FOREIGN KEY(scan_id) REFERENCES scans(id))''')
 
         conn.commit()
@@ -87,6 +89,10 @@ class Scanner:
             vulnerabilities = []
             for res in data.get("Results", []):
                 for vuln in res.get("Vulnerabilities", []):
+                    # Extract fix version
+                    fixed_version = vuln.get("FixedVersion", "")
+                    installed_version = vuln.get("InstalledVersion", "")
+
                     vulnerabilities.append({
                         "scan_type": "dependency",
                         "severity": vuln.get("Severity", "UNKNOWN"),
@@ -94,7 +100,9 @@ class Scanner:
                         "vulnerability": vuln.get("VulnerabilityID", ""),
                         "description": vuln.get("Title", ""),
                         "file": res.get("Target", ""),
-                        "line": None
+                        "line": None,
+                        "installed_version": installed_version,
+                        "fixed_version": fixed_version
                     })
 
             print(f"✓ Trivy: Found {len(vulnerabilities)} vulnerabilities")
@@ -171,10 +179,11 @@ class Scanner:
         all_vulns = trivy_vulns + gitleaks_vulns
         for vuln in all_vulns:
             c.execute("""INSERT INTO vulnerabilities
-                        (scan_id, scan_type, severity, package, vulnerability, description, file, line)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                        (scan_id, scan_type, severity, package, vulnerability, description, file, line, installed_version, fixed_version)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                      (scan_id, vuln["scan_type"], vuln["severity"], vuln["package"],
-                      vuln["vulnerability"], vuln["description"], vuln["file"], vuln["line"]))
+                      vuln["vulnerability"], vuln["description"], vuln["file"], vuln["line"],
+                      vuln.get("installed_version", ""), vuln.get("fixed_version", "")))
 
         conn.commit()
         conn.close()
